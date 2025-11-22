@@ -1,0 +1,9 @@
+data
+*.ipynb
+.venv
+__pycache__
+.env
+*.bin
+output
+temp_images
+chroma_db
