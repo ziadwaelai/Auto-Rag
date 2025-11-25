@@ -1,5 +1,9 @@
 import cycls
 import os
+import sys
+# add the parent directory to the sys.path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+print(sys.path)
 from dotenv import load_dotenv
 from parse_requirements import get_requirements_list
 load_dotenv( "backend/.env")
@@ -40,7 +44,7 @@ async def retrieve_context(query: str, n_results: int = 10):
     if results['documents'][0]:
         for doc, metadata in zip(results['documents'][0], results['metadatas'][0]):
             context_parts.append(
-                f"[Source: {metadata['source']}, Page: {metadata['page_number']}]\n{doc}"
+                f" المصدر: {metadata['source']} | الصفحة: {metadata['page_number']}\n\n{doc}"
             )
 
     return "\n\n---\n\n".join(context_parts)
@@ -48,17 +52,20 @@ async def retrieve_context(query: str, n_results: int = 10):
 
 # LLM streaming function
 async def llm(messages):
-    """Call OpenAI with streaming"""
-    import openai
+    """Call Groq with streaming"""
+    from groq import AsyncGroq
     from dotenv import load_dotenv
     load_dotenv("backend/.env")
 
-    client = openai.AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    client = AsyncGroq(api_key=os.getenv("GROQ_API_KEY"))
 
     response = await client.chat.completions.create(
-        model="gpt-4.1-mini-2025-04-14",
+        model="openai/gpt-oss-120b",
         messages=messages,
-        temperature=0.3,
+        temperature=0.7,
+        max_completion_tokens=8192,
+        top_p=1,
+        reasoning_effort="medium",
         stream=True
     )
 
@@ -83,27 +90,29 @@ async def rag_agent(context):
     # Retrieve relevant context
     retrieved_context = await retrieve_context(user_message, n_results=3)
 
-    # Build RAG prompt
+    # Build RAG prompt in Arabic
     system_prompt = {
         "role": "system",
-        "content": """You are a helpful assistant for procurement and contracting policies.
-Use the provided context to answer questions accurately.
-If the context doesn't contain the answer, say so clearly.
-Always cite the source and page number when referencing information.
+        "content": """أنت مساعد متخصص في سياسات المشتريات والعقود.
+استخدم السياق المقدم للإجابة على الأسئلة بدقة.
+إذا لم يحتوي السياق على الإجابة، قل ذلك بوضوح.
+عند الإجابة، يجب عليك الاستشهاد بالمصدر والصفحة من السياق المقدم.
+استخدم التنسيق التالي للاستشهاد: (المصدر: اسم_الملف، الصفحة: رقم_الصفحة)
+قدم إجابة مفصلة وواضحة بالعربية مع ذكر المصادر.
 """
     }
 
     # Add context to user message
     rag_user_message = {
         "role": "user",
-        "content": f"""Context from knowledge base:
+        "content": f"""السياق من قاعدة المعرفة:
 {retrieved_context}
 
 ---
 
-User Question: {user_message}
+سؤال المستخدم: {user_message}
 
-Please answer based on the context above. Cite sources with [Source: filename, Page: X]."""
+الرجاء الإجابة بناءً على السياق أعلاه."""
     }
 
     messages = [system_prompt]
@@ -117,4 +126,4 @@ Please answer based on the context above. Cite sources with [Source: filename, P
 
 
 if __name__ == "__main__":
-    agent.deploy(prod=True)
+    agent.local()
