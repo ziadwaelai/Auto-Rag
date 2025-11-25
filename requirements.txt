@@ -1,15 +1,4 @@
-langchain
-langchain-core
-langchain-community
-langchain-text-splitters
-pypdf
-pymupdf
-pdfplumber
 chromadb
 python-dotenv
 langchain_openai
-langgraph
-Pillow
-pdf2image
-pydantic
-cycls
+openai

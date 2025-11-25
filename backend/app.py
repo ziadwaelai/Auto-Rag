@@ -1,21 +1,27 @@
 import cycls
 import os
-from pathlib import Path
 from dotenv import load_dotenv
+from parse_requirements import get_requirements_list
+load_dotenv( "backend/.env")
 
-# Get script directory
-script_dir = Path(__file__).parent
-root_dir = script_dir.parent
-
-load_dotenv(script_dir / ".env")
-
-agent = cycls.Agent()
+agent = cycls.Agent(
+    pip=get_requirements_list(),
+    api_key=os.getenv("API_KEY"),
+    copy=[
+        "chroma_db",
+        "backend/.env",
+        "backend/indexing",
+        "backend/logger"
+    ]
+)
 
 
 # RAG retrieval function
 async def retrieve_context(query: str, n_results: int = 10):
     """Retrieve relevant chunks from ChromaDB"""
-    from indexing.pipeline.chroma_storage import ChromaStorage
+    from backend.indexing.pipeline.chroma_storage import ChromaStorage
+    from dotenv import load_dotenv
+    load_dotenv("backend/.env")
     # Initialize ChromaDB
     chroma_storage = ChromaStorage(
         collection_name="procurement_kb",
@@ -44,6 +50,8 @@ async def retrieve_context(query: str, n_results: int = 10):
 async def llm(messages):
     """Call OpenAI with streaming"""
     import openai
+    from dotenv import load_dotenv
+    load_dotenv("backend/.env")
 
     client = openai.AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
@@ -109,4 +117,4 @@ Please answer based on the context above. Cite sources with [Source: filename, P
 
 
 if __name__ == "__main__":
-    agent.local()
+    agent.deploy(prod=True)

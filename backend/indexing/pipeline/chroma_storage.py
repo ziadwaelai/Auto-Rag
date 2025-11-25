@@ -4,7 +4,7 @@ import chromadb
 from chromadb.config import Settings
 from langchain_openai import OpenAIEmbeddings
 import sys
-from logger import logger
+from backend.logger import logger
 
 
 class ChromaStorage:
